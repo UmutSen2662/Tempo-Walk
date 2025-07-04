@@ -44,6 +44,13 @@ export default defineConfig({
                         purpose: "maskable",
                     },
                 ],
+                screenshots: [
+                    {
+                        src: "./screenshot.png",
+                        sizes: "480x840",
+                        type: "image/png",
+                    },
+                ],
                 description: "Tempo Walk - A timer for interval walking",
                 id: "./tempo-walk",
                 launch_handler: {
@@ -53,6 +60,7 @@ export default defineConfig({
                 display_override: ["window-controls-overlay", "standalone", "browser"],
                 categories: ["fitness", "health"],
                 dir: "ltr",
+                lang: "en",
             },
         }),
     ],
