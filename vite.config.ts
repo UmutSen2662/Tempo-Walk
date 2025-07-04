@@ -13,11 +13,11 @@ export default defineConfig({
             manifest: {
                 name: "Tempo Walk",
                 short_name: "Tempo Walk",
-                start_url: "./tempo-walk",
+                start_url: "./",
                 display: "standalone",
                 background_color: "#222",
                 theme_color: "#66bb6a",
-                scope: "./tempo-walk",
+                scope: "./",
                 icons: [
                     {
                         src: "./pwa-192x192.png",
