@@ -17,6 +17,7 @@ export default defineConfig({
                 display: "standalone",
                 background_color: "#222",
                 theme_color: "#66bb6a",
+                scope: "./tempowalk",
                 icons: [
                     {
                         src: "/pwa-192x192.png",
