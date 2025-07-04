@@ -1,8 +1,7 @@
 <script lang="ts">
-    let { currentPhase, remainingTime, isPaused } = $props<{
-        currentPhase: "slow" | "fast" | "ready";
+    let { remainingTime, totalTime } = $props<{
         remainingTime: number;
-        isPaused: boolean;
+        totalTime: number;
     }>();
 
     function formatTime(seconds: number): string {
@@ -12,36 +11,38 @@
     }
 </script>
 
-<div class="phase-timer-display">
-    <span class="current-phase-text">
-        {#if isPaused}
-            Paused
-        {:else if currentPhase === "slow"}
-            Slow Walk
-        {:else if currentPhase === "fast"}
-            Fast Walk
-        {:else}
-            Ready
-        {/if}
-    </span>
-    <span class="countdown-timer-text">{formatTime(remainingTime)}</span>
+<div class="timer-display">
+    <div class="timer-display-group">
+        <span class="display-text"> Current Phase </span>
+        <span class="timer-text">{formatTime(remainingTime)}</span>
+    </div>
+
+    <div class="timer-display-group">
+        <span class="display-text"> Total Time </span>
+        <span class="timer-text">{formatTime(totalTime)}</span>
+    </div>
 </div>
 
 <style>
-    .phase-timer-display {
+    .timer-display {
+        display: flex;
+        align-items: center;
+        justify-content: space-around;
+        width: 100%;
+    }
+    .timer-display-group {
         display: flex;
         flex-direction: column;
         align-items: center;
-        margin-bottom: 25px;
     }
-    .current-phase-text {
-        font-size: 1.5em;
+    .display-text {
+        font-size: 1.2em;
         font-weight: 600;
         color: #ccc;
         margin-bottom: 5px;
     }
-    .countdown-timer-text {
-        font-size: 3.5em;
+    .timer-text {
+        font-size: 3em;
         font-weight: bold;
         color: #66bb6a;
     }

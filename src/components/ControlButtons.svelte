@@ -39,20 +39,22 @@
 
 <style>
     .control-buttons {
-        display: flex;
-        justify-content: space-around;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
         width: 100%;
+        gap: 10px;
     }
     .control-button {
         font-weight: bold;
-        padding: 12px 25px;
-        border-radius: 25px;
+        height: 3rem;
+        border-radius: 15px;
         border: none;
         cursor: pointer;
         transition:
             background-color 0.2s ease,
             opacity 0.2s ease;
         color: #fff;
+        font-size: 1rem;
     }
     .control-button.disabled {
         opacity: 0.4;

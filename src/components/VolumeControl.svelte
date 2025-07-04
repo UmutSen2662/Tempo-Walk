@@ -1,36 +1,13 @@
 <script lang="ts">
-    // Define the props, including the callback function
-    let { initialVolume, onChangeVolume } = $props<{
-        initialVolume: number;
-        onChangeVolume: (volume: number) => void;
+    // Corrected $bindable() syntax directly in $props destructuring
+    let { volume = $bindable() } = $props<{
+        volume: number;
     }>();
-
-    // Use $state for the internal volume. Initialize it with the prop.
-    let volume = $state(initialVolume);
-
-    // Function to call the parent's callback when the slider changes
-    function handleChange() {
-        onChangeVolume(volume);
-    }
-
-    // Removed the problematic $state effect that was resetting the slider.
-    // The initialVolume prop will set the initial value of 'volume' once.
-    // Subsequent changes to 'volume' will come from the slider itself,
-    // and onChangeVolume will propagate them to the parent.
 </script>
 
 <div class="volume-control">
     <label for="volumeSlider" class="volume-label">Volume</label>
-    <input
-        type="range"
-        id="volumeSlider"
-        min="0"
-        max="100"
-        bind:value={volume}
-        oninput={handleChange}
-        step="1"
-        class="volume-slider"
-    />
+    <input type="range" id="volumeSlider" min="0" max="100" bind:value={volume} step="10" class="volume-slider" />
 </div>
 
 <style>
@@ -39,9 +16,10 @@
         flex-direction: column;
         align-items: center;
         width: 100%;
-        margin-bottom: 30px;
+        margin-bottom: 10px;
     }
     .volume-label {
+        font-weight: bold;
         font-size: 1.2em;
         color: #ccc;
         margin-bottom: 10px;

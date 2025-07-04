@@ -5,16 +5,22 @@
     import VolumeControl from "./components/VolumeControl.svelte";
     import ControlButtons from "./components/ControlButtons.svelte";
 
+    // --- Local Storage Key ---
+    const LOCAL_STORAGE_KEY = "intervalWalkSettings";
+    const DEBOUNCE_DELAY_MS = 1000; // 1 second debounce delay
+
     // --- Svelte Reactive State Variables (using $state) ---
+    // Initialize with default values, which will be overwritten by loaded settings
     let slowBpm = $state(60);
-    let slowDurationSeconds = $state(180); // Now directly seconds (3 minutes)
+    let slowDurationSeconds = $state(180); // Default: 3 minutes
     let fastBpm = $state(120);
-    let fastDurationSeconds = $state(180); // Now directly seconds (3 minutes)
-    let volume = $state(60); // Volume slider value 0-100
+    let fastDurationSeconds = $state(180); // Default: 3 minutes
+    let volume = $state(60); // Default: 60%
 
     let isPlaying = $state(false);
     let isPaused = $state(false);
     let currentPhase = $state<"slow" | "fast" | "ready">("ready");
+    let totalTime = $state(0); // Total time of the workout
     let remainingTime = $state(0); // Time remaining in current phase (in seconds)
     let isAudioReady = $state(false); // New state to track audio loading
 
@@ -22,10 +28,13 @@
     let metronomeIntervalId: number | null = null;
     let countdownTimerId: number | null = null;
     let audioContext: AudioContext | null = null;
-    let tickBuffer: AudioBuffer | null = null;
-    let tackBuffer: AudioBuffer | null = null;
+    let tickBuffer: AudioBuffer | null = null; // To store the decoded 'tick' audio file
+    let tackBuffer: AudioBuffer | null = null; // To store the decoded 'tack' audio file
     let beatCounter: number = 0;
     const beatsPerMeasure: number = 2;
+
+    // Debounce timer ID
+    let debounceTimeoutId: number | null = null;
 
     // URLs for your metronome click sound files (relative to the 'public' folder)
     const tickAudioFileUrl: string = "./tick.mp3";
@@ -34,17 +43,73 @@
     // --- DOM Element References (using bind:this) ---
     let messageBox: HTMLDivElement;
 
-    // New derived state for effective audio gain (exponential scale)
+    // --- Derived States (using $derived) ---
     const effectiveVolumeGain = $derived(Math.pow(volume / 100, 2) * 2); // Using power of 2 for a good curve
 
     // --- Utility Functions ---
     function showMessage(message: string, duration: number = 3000) {
+        console.log("showMessage called with:", message); // Debug log
         if (messageBox) {
+            console.log("messageBox element is available:", messageBox); // Debug log
             messageBox.textContent = message;
-            messageBox.classList.add("show");
+            // Directly set opacity and pointer-events
+            messageBox.style.opacity = "1";
+            messageBox.style.pointerEvents = "auto";
+            console.log("messageBox style after showing:", messageBox.style.opacity); // Debug log
             setTimeout(() => {
-                messageBox.classList.remove("show");
+                messageBox.style.opacity = "0";
+                messageBox.style.pointerEvents = "none"; // Revert pointer-events after fade out
+                console.log("messageBox style after hiding:", messageBox.style.opacity); // Debug log
             }, duration);
+        } else {
+            console.warn("messageBox element is not yet available when showMessage was called."); // Debug log
+        }
+    }
+
+    // --- Local Storage Functions ---
+    function saveSettingsToLocalStorage() {
+        try {
+            const settings = {
+                slowBpm: slowBpm,
+                slowDurationSeconds: slowDurationSeconds,
+                fastBpm: fastBpm,
+                fastDurationSeconds: fastDurationSeconds,
+                volume: volume,
+            };
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(settings));
+            console.log("Settings saved to local storage.");
+        } catch (error) {
+            console.error("Failed to save settings to local storage:", error);
+            showMessage("Failed to save settings. Your browser might be in private mode.");
+        }
+    }
+
+    // Debounced version of saveSettingsToLocalStorage
+    function debouncedSaveSettings() {
+        if (debounceTimeoutId) {
+            clearTimeout(debounceTimeoutId);
+        }
+        debounceTimeoutId = setTimeout(() => {
+            saveSettingsToLocalStorage();
+            debounceTimeoutId = null;
+        }, DEBOUNCE_DELAY_MS);
+    }
+
+    function loadSettingsFromLocalStorage() {
+        try {
+            const savedSettings = localStorage.getItem(LOCAL_STORAGE_KEY);
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                slowBpm = settings.slowBpm !== undefined ? settings.slowBpm : 60;
+                slowDurationSeconds = settings.slowDurationSeconds !== undefined ? settings.slowDurationSeconds : 180;
+                fastBpm = settings.fastBpm !== undefined ? settings.fastBpm : 120;
+                fastDurationSeconds = settings.fastDurationSeconds !== undefined ? settings.fastDurationSeconds : 180;
+                volume = settings.volume !== undefined ? settings.volume : 60;
+                console.log("Settings loaded from local storage:", settings);
+            }
+        } catch (error) {
+            console.error("Failed to load settings from local storage:", error);
+            showMessage("Failed to load saved settings.");
         }
     }
 
@@ -138,6 +203,7 @@
 
         if (isPlaying && !isPaused) {
             remainingTime--;
+            totalTime++;
         }
 
         if (remainingTime < 0) {
@@ -165,9 +231,9 @@
         }
 
         const sBpm = slowBpm;
-        const sDur = slowDurationSeconds; // Use seconds directly
+        const sDur = slowDurationSeconds;
         const fBpm = fastBpm;
-        const fDur = fastDurationSeconds; // Use seconds directly
+        const fDur = fastDurationSeconds;
 
         if (
             isNaN(sBpm) ||
@@ -175,13 +241,13 @@
             sBpm > 240 ||
             isNaN(sDur) ||
             sDur < 10 ||
-            sDur > 300 || // Adjusted validation for seconds
+            sDur > 300 ||
             isNaN(fBpm) ||
             fBpm < 40 ||
             fBpm > 240 ||
             isNaN(fDur) ||
             fDur < 10 ||
-            fDur > 300 // Adjusted validation for seconds
+            fDur > 300
         ) {
             showMessage("Please ensure all BPMs are between 40-240 and durations are between 10-300 seconds.");
             return;
@@ -218,6 +284,7 @@
             countdownTimerId = null;
         }
         console.log("Workout paused. Current phase was:", currentPhase, "Remaining time:", remainingTime);
+        saveSettingsToLocalStorage(); // Immediate save on explicit pause
     }
 
     function handleStop() {
@@ -232,62 +299,64 @@
         currentPhase = "ready";
         remainingTime = 0;
         beatCounter = 0;
+        totalTime = 0;
         console.log("Workout stopped and reset.");
-    }
-
-    // --- Event Handlers from Child Components (now directly called callbacks) ---
-    function handlePhaseSettingsChange(detail: { title: string; bpm: number; durationSeconds: number }) {
-        // Changed detail type
-        const { title, bpm, durationSeconds } = detail; // Destructure durationSeconds
-        if (title === "Slow Walk") {
-            slowBpm = bpm;
-            slowDurationSeconds = durationSeconds; // Assign to slowDurationSeconds
-        } else if (title === "Fast Walk") {
-            fastBpm = bpm;
-            fastDurationSeconds = durationSeconds; // Assign to fastDurationSeconds
-        }
-        if (isPlaying || isPaused) {
-            handleStop(); // Use handleStop to reset if playing/paused
-            showMessage("Settings changed. Press Start to begin new workout.");
-        }
-    }
-
-    function handleVolumeChange(newVolume: number) {
-        volume = newVolume; // newVolume directly contains the volume number
+        saveSettingsToLocalStorage(); // Immediate save on explicit stop
     }
 
     // --- Svelte 5 $effect for initial audio context creation and file loading ---
     $effect(() => {
-        initAudioContextAndLoadFiles();
+        loadSettingsFromLocalStorage(); // Load settings first
+        initAudioContextAndLoadFiles(); // Then initialize audio
+    });
+
+    // $effect to save BPM and Duration settings whenever they change, but only if not playing/paused
+    $effect(() => {
+        slowBpm;
+        slowDurationSeconds;
+        fastBpm;
+        fastDurationSeconds;
+
+        // Only debounce save if the app is not currently playing or paused.
+        // Explicit pause/stop will trigger immediate save.
+        if (!isPlaying && !isPaused) {
+            debouncedSaveSettings();
+        }
+    });
+
+    // $effect: Save volume settings whenever 'volume' changes, regardless of play/pause state
+    $effect(() => {
+        volume; // This effect depends only on 'volume'
+        debouncedSaveSettings(); // Debounce save for volume changes
     });
 </script>
 
 <div bind:this={messageBox} class="message-box"></div>
 
 <div class="app-container">
-    <h1 class="app-title">Interval Walk</h1>
+    <h1 class="app-state">
+        {#if isPaused}
+            Paused
+        {:else if currentPhase === "slow"}
+            Slow Walk
+        {:else if currentPhase === "fast"}
+            Fast Walk
+        {:else if currentPhase === "ready"}
+            Ready
+        {/if}
+    </h1>
 
     <!-- Phase Display Component -->
-    <PhaseDisplay {currentPhase} {remainingTime} {isPaused} />
+    <PhaseDisplay {remainingTime} {totalTime} />
 
     <!-- Slow Walk Settings Component -->
-    <PhaseSettings
-        title="Slow Walk"
-        initialBpm={slowBpm}
-        initialDurationMinutes={slowDurationSeconds}
-        onChangeSettings={handlePhaseSettingsChange}
-    />
+    <PhaseSettings title="Slow Walk" bind:bpm={slowBpm} bind:durationSeconds={slowDurationSeconds} />
 
     <!-- Fast Walk Settings Component -->
-    <PhaseSettings
-        title="Fast Walk"
-        initialBpm={fastBpm}
-        initialDurationMinutes={fastDurationSeconds}
-        onChangeSettings={handlePhaseSettingsChange}
-    />
+    <PhaseSettings title="Fast Walk" bind:bpm={fastBpm} bind:durationSeconds={fastDurationSeconds} />
 
     <!-- Volume Control Component -->
-    <VolumeControl initialVolume={volume} onChangeVolume={handleVolumeChange} />
+    <VolumeControl bind:volume />
 
     <!-- Control Buttons Component -->
     <ControlButtons
@@ -301,40 +370,23 @@
 </div>
 
 <style>
-    /* General body styling */
-    :root {
-        font-family: sans-serif; /* Simpler font */
-        background-color: #333; /* Dark background */
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-        margin: 0;
-        color: #eee; /* Light text color */
-    }
-
     /* Message Box */
     .message-box {
         position: fixed;
         top: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background-color: #fff;
-        color: #333;
+        background-color: #ccc;
+        color: #222;
         padding: 10px 20px;
         border-radius: 5px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-        z-index: 1000;
+        z-index: 10;
         opacity: 0;
-        visibility: hidden;
-        transition:
-            opacity 0.3s ease-in-out,
-            visibility 0.3s ease-in-out;
+        transition: opacity 0.3s ease-in-out;
         text-align: center;
-    }
-    .message-box.show {
-        opacity: 1;
-        visibility: visible;
+        pointer-events: none;
+        width: calc(100% - 80px);
     }
 
     /* App Container */
@@ -342,21 +394,17 @@
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 20px;
-        background-color: #444; /* Slightly lighter dark background */
-        border-radius: 10px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        max-width: 400px;
-        width: 90%; /* Responsive width */
-        margin: 20px; /* Some margin for smaller screens */
+        width: 100%;
+        gap: 20px;
     }
 
     /* App Title */
-    .app-title {
-        font-size: 2.5em; /* Larger title */
+    .app-state {
+        font-size: 2.5em;
         font-weight: bold;
-        margin-bottom: 25px;
-        color: #66bb6a; /* Green accent */
+        color: #66bb6a;
         text-align: center;
+        margin: 0;
+        margin-bottom: 10px;
     }
 </style>
