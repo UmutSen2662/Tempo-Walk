@@ -7,13 +7,13 @@
 
     // --- Local Storage Key ---
     const LOCAL_STORAGE_KEY = "intervalWalkSettings";
-    const DEBOUNCE_DELAY_MS = 1000; // 1 second debounce delay
+    const DEBOUNCE_DELAY_MS = 500; // 500ms debounce delay
 
     // --- Svelte Reactive State Variables (using $state) ---
     // Initialize with default values, which will be overwritten by loaded settings
-    let slowBpm = $state(60);
+    let slowBpm = $state(80); // Default: 80 bpm
     let slowDurationSeconds = $state(180); // Default: 3 minutes
-    let fastBpm = $state(120);
+    let fastBpm = $state(100); // Default: 100 bpm
     let fastDurationSeconds = $state(180); // Default: 3 minutes
     let volume = $state(60); // Default: 60%
 
@@ -284,7 +284,6 @@
             countdownTimerId = null;
         }
         console.log("Workout paused. Current phase was:", currentPhase, "Remaining time:", remainingTime);
-        saveSettingsToLocalStorage(); // Immediate save on explicit pause
     }
 
     function handleStop() {
@@ -301,7 +300,6 @@
         beatCounter = 0;
         totalTime = 0;
         console.log("Workout stopped and reset.");
-        saveSettingsToLocalStorage(); // Immediate save on explicit stop
     }
 
     // --- Svelte 5 $effect for initial audio context creation and file loading ---
@@ -310,24 +308,15 @@
         initAudioContextAndLoadFiles(); // Then initialize audio
     });
 
-    // $effect to save BPM and Duration settings whenever they change, but only if not playing/paused
+    // $effect to save Volume, BPM and Duration settings whenever they change
     $effect(() => {
+        volume;
         slowBpm;
         slowDurationSeconds;
         fastBpm;
         fastDurationSeconds;
 
-        // Only debounce save if the app is not currently playing or paused.
-        // Explicit pause/stop will trigger immediate save.
-        if (!isPlaying && !isPaused) {
-            debouncedSaveSettings();
-        }
-    });
-
-    // $effect: Save volume settings whenever 'volume' changes, regardless of play/pause state
-    $effect(() => {
-        volume; // This effect depends only on 'volume'
-        debouncedSaveSettings(); // Debounce save for volume changes
+        debouncedSaveSettings();
     });
 </script>
 
