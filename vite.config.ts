@@ -14,10 +14,11 @@ export default defineConfig({
                 name: "Tempo Walk",
                 short_name: "Tempo Walk",
                 start_url: "./",
+                scope: "./",
+                id: "./",
                 display: "standalone",
                 background_color: "#222",
                 theme_color: "#66bb6a",
-                scope: "./",
                 icons: [
                     {
                         src: "./pwa-192x192.png",
@@ -58,7 +59,6 @@ export default defineConfig({
                     },
                 ],
                 description: "Tempo Walk - A timer/metronome for interval walking",
-                id: "./tempo-walk",
                 launch_handler: {
                     client_mode: "auto",
                 },
