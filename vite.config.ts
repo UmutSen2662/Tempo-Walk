@@ -57,7 +57,7 @@ export default defineConfig({
                         form_factor: "wide",
                     },
                 ],
-                description: "Tempo Walk - A timer for interval walking",
+                description: "Tempo Walk - A timer/metronome for interval walking",
                 id: "./tempo-walk",
                 launch_handler: {
                     client_mode: "auto",
