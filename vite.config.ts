@@ -54,6 +54,7 @@ export default defineConfig({
                         src: "./screenshot-2.png",
                         sizes: "1280x720",
                         type: "image/png",
+                        form_factor: "wide",
                     },
                 ],
                 description: "Tempo Walk - A timer for interval walking",
