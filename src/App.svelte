@@ -5,11 +5,11 @@
     import VolumeControl from "./components/VolumeControl.svelte";
     import ControlButtons from "./components/ControlButtons.svelte";
 
-    // --- Local Storage Key ---
+    // Local Storage Key
     const LOCAL_STORAGE_KEY = "intervalWalkSettings";
     const DEBOUNCE_DELAY_MS = 500; // 500ms debounce delay
 
-    // --- Svelte Reactive State Variables (using $state) ---
+    // Svelte Reactive State Variables (using $state)
     // Initialize with default values, which will be overwritten by loaded settings
     let slowBpm = $state(80); // Default: 80 bpm
     let slowDurationSeconds = $state(180); // Default: 3 minutes
@@ -24,7 +24,7 @@
     let remainingTime = $state(0); // Time remaining in current phase (in seconds)
     let isAudioReady = $state(false); // New state to track audio loading
 
-    // --- Internal Variables (not directly reactive for UI, but managed by logic) ---
+    // Internal Variables (not directly reactive for UI, but managed by logic)
     let metronomeIntervalId: number | null = null;
     let countdownTimerId: number | null = null;
     let audioContext: AudioContext | null = null;
@@ -40,13 +40,13 @@
     const tickAudioFileUrl: string = "./tick.mp3";
     const tackAudioFileUrl: string = "./tack.mp3";
 
-    // --- DOM Element References (using bind:this) ---
+    // DOM Element References (using bind:this)
     let messageBox: HTMLDivElement;
 
-    // --- Derived States (using $derived) ---
-    const effectiveVolumeGain = $derived(Math.pow(volume / 100, 2) * 2); // Using power of 2 for a good curve
+    // Derived States (using $derived)
+    const effectiveVolumeGain = $derived(Math.pow(volume / 100, 2)); // Using power of 2 for a good curve
 
-    // --- Utility Functions ---
+    // Utility Functions
     function showMessage(message: string, duration: number = 3000) {
         console.log("showMessage called with:", message); // Debug log
         if (messageBox) {
@@ -66,7 +66,7 @@
         }
     }
 
-    // --- Local Storage Functions ---
+    // Local Storage Functions
     function saveSettingsToLocalStorage() {
         try {
             const settings = {
@@ -113,7 +113,7 @@
         }
     }
 
-    // --- Audio Functions ---
+    // Audio Functions
     async function initAudioContextAndLoadFiles() {
         if (!audioContext) {
             try {
@@ -170,7 +170,7 @@
         beatCounter = (beatCounter + 1) % beatsPerMeasure;
     }
 
-    // --- Metronome Control Functions ---
+    // Metronome Control Functions
     function startMetronomeClicks(bpmToUse: number) {
         if (metronomeIntervalId) {
             clearInterval(metronomeIntervalId);
@@ -188,7 +188,7 @@
         }
     }
 
-    // --- Interval Walk Logic ---
+    // Interval Walk Logic
     function updatePhase() {
         if (remainingTime <= 0) {
             if (currentPhase === "slow") {
@@ -302,7 +302,7 @@
         console.log("Workout stopped and reset.");
     }
 
-    // --- Svelte 5 $effect for initial audio context creation and file loading ---
+    // Svelte 5 $effect for initial audio context creation and file loading
     $effect(() => {
         loadSettingsFromLocalStorage(); // Load settings first
         initAudioContextAndLoadFiles(); // Then initialize audio
